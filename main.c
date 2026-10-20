@@ -8,21 +8,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LOCALHOST "127.0.0.1"
-#define PORT 8080
 #define BUFFER_SIZE 32
 
-int main(){ 
-    struct sockaddr_in addr;
-    int sfd, error;
+struct sockaddr_in addr;
+int error;
+
+int create_socket(port, host) {
+    int sfd;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
-    inet_aton(LOCALHOST, &addr.sin_addr);
+    addr.sin_port = htons(port);
+    inet_aton(host, &addr.sin_addr);
     
     if((sfd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Erro ao criar o socket");
         return 0;
     }
+    return sfd
+}
+
+int main(){ 
+    int sfd = create_socket(8080, "127.0.0.1");     
 
     int opt = 1;
     if((setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof opt)) < 0) {
@@ -44,8 +49,13 @@ int main(){
             char wbuffer[256] = {0};
             int c;
             for(;;) {
+                printf("Digite sua mensagem: ");
                 scanf("%s", wbuffer);
                 while((c = getchar()) != '\n') {}
+                if(connect(sfd, (struct sockaddr*)&addr, sizeof addr) < 0) {
+                    perror("Erro na conexão do socket");
+                    close(sfd);
+                }
                 if(send(sfd, wbuffer, sizeof wbuffer, MSG_EOR)  != (ssize_t)3) {
                     perror("Mensagem não enviada");
                 }
@@ -59,7 +69,7 @@ int main(){
         perror("Erro no listen do socket");
         close(sfd);
     }
-    printf("Escutando na porta: %d\n", PORT);
+    printf("Escutando na porta: %d\n", 8080);
     char cbuffer[BUFFER_SIZE] = {0};
     for(;;) {
         int cfd = accept(sfd, NULL, NULL);
